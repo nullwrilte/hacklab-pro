@@ -9,7 +9,7 @@ Ambiente Linux de segurança ofensiva e defensiva rodando nativamente no Android
 - App [Termux:X11](https://github.com/termux/termux-x11/releases) instalado no dispositivo
 - 2GB de espaço livre mínimo
 
-> Android 12+: desabilite o **Phantom Process Killer** em Opções do Desenvolvedor → Limitar processos em segundo plano → Sem limite.
+> Android 12+: desabilite o **Phantom Process Killer** em Opções do Desenvolvedor → Desativar restrições de processos secundário → Ative.
 
 ## Instalação
 
