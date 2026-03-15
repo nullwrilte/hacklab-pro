@@ -75,7 +75,11 @@ action_stop_lab() {
 }
 
 action_install_tools() {
-    bash "$HACKLAB_ROOT/ui/select-tools.sh"
+    if command -v fzf &>/dev/null; then
+        bash "$HACKLAB_ROOT/ui/fzf-tools.sh"
+    else
+        bash "$HACKLAB_ROOT/ui/select-tools.sh"
+    fi
 }
 
 action_update() {
@@ -150,7 +154,7 @@ main() {
         choice=$(ui_menu "HACKLAB-PRO" "O que deseja fazer?" \
             "start"   "▶  Iniciar Lab (desktop + serviços)" \
             "stop"    "■  Parar Lab" \
-            "tools"   "🔧 Instalar / gerenciar ferramentas" \
+            "tools"   "🔧 Instalar / gerenciar ferramentas (fzf)" \
             "distro"  "🐉 Distros Linux (proot-distro)" \
             "update"  "↑  Atualizar tudo" \
             "health"  "🩺 Health Check (verificar + reparar)" \
