@@ -136,6 +136,10 @@ action_plugins() {
     esac
 }
 
+action_distro() {
+    bash "$HACKLAB_ROOT/scripts/distro.sh" menu
+}
+
 # ── Loop principal ────────────────────────────────────────────────────────────
 
 main() {
@@ -147,6 +151,7 @@ main() {
             "start"   "▶  Iniciar Lab (desktop + serviços)" \
             "stop"    "■  Parar Lab" \
             "tools"   "🔧 Instalar / gerenciar ferramentas" \
+            "distro"  "🐉 Distros Linux (proot-distro)" \
             "update"  "↑  Atualizar tudo" \
             "health"  "🩺 Health Check (verificar + reparar)" \
             "plugins" "🧩 Listar plugins disponíveis" \
@@ -163,6 +168,7 @@ main() {
             update)  action_update ;;
             health)  action_health_check ;;
             plugins) action_plugins ;;
+            distro)  action_distro ;;
             backup)  action_backup ;;
             restore) action_restore ;;
             list)    action_list_tools ;;
