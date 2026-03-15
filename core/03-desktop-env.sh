@@ -10,7 +10,7 @@ die() { log "ERRO: $*"; exit 1; }
 # Lê preferência salva ou usa padrão
 get_desktop() {
     if [[ -f "$PREFS" ]]; then
-        grep "^DESKTOP=" "$PREFS" | cut -d= -f2
+        grep "^DESKTOP=" "$PREFS" | head -1 | cut -d= -f2
     else
         echo "xfce4"
     fi

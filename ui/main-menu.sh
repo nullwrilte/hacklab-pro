@@ -24,7 +24,8 @@ ui_menu() {
         dialog|whiptail)
             "$ENGINE" --clear --title "$title" \
                       --menu "$prompt" 20 60 10 "$@" 2>"$tmp"
-            cat "$tmp"; rm -f "$tmp" ;;
+            local result; result=$(cat "$tmp"); rm -f "$tmp"
+            echo "${result}" ;;
         text)
             echo -e "\n${BOLD}$title${NC} — $prompt"
             local i=1 items=("$@")
@@ -107,9 +108,12 @@ action_status() {
     pgrep -x termux-x11  &>/dev/null && x11_status="✓ rodando" || x11_status="✗ parado"
     pgrep -x pulseaudio  &>/dev/null && pulse_status="✓ rodando" || pulse_status="✗ parado"
     local desktop
-    desktop=$(grep "^DESKTOP=" "$PREFS" 2>/dev/null | cut -d= -f2 || echo "xfce4")
-    pgrep -x "${desktop}-session" &>/dev/null || pgrep -x "$desktop" &>/dev/null \
-        && desktop_status="✓ rodando" || desktop_status="✗ parado"
+    desktop=$(grep "^DESKTOP=" "$PREFS" 2>/dev/null | head -1 | cut -d= -f2 || echo "xfce4")
+    if pgrep -x "${desktop}-session" &>/dev/null || pgrep -x "$desktop" &>/dev/null; then
+        desktop_status="✓ rodando"
+    else
+        desktop_status="✗ parado"
+    fi
 
     ui_msg "Status do Lab" \
 "Termux:X11 : $x11_status

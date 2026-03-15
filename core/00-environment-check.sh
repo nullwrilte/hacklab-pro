@@ -28,7 +28,7 @@ check_android_version() {
     android_ver=$(getprop ro.build.version.release 2>/dev/null || echo "unknown")
     log "✓ Android versão: $android_ver"
     local major=${android_ver%%.*}
-    if [[ "$major" -ge 12 ]] 2>/dev/null; then
+    if [[ "$major" =~ ^[0-9]+$ ]] && [[ "$major" -ge 12 ]]; then
         log "⚠ Android 12+: Desabilite o Phantom Process Killer nas opções de desenvolvedor."
     fi
 }

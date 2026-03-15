@@ -9,25 +9,21 @@ source "$HACKLAB_ROOT/ui/progress-bar.sh" 2>/dev/null || true
 
 log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
 
-HEALTHY=() BROKEN=() MISSING=()
+HEALTHY=() BROKEN=()
 
 # ── Verifica uma ferramenta ───────────────────────────────────────────────────
 
 check_tool() {
     local name="$1"
 
-    # 1. Tenta plugin hook check() primeiro
+    # 1. Tenta plugin hook check() primeiro (em subshell para não poluir o ambiente)
     local plugin="$HACKLAB_ROOT/tools/plugins/${name}.sh"
     if [[ -f "$plugin" ]]; then
-        source "$plugin"
-        if declare -f check &>/dev/null; then
-            if check >> "$LOG" 2>&1; then
-                HEALTHY+=("$name"); return
-            else
-                BROKEN+=("$name"); return
-            fi
+        if ( source "$plugin"; declare -f check &>/dev/null && check ) >> "$LOG" 2>&1; then
+            HEALTHY+=("$name"); return
+        else
+            BROKEN+=("$name"); return
         fi
-        unset -f install update remove check 2>/dev/null || true
     fi
 
     # 2. Verifica se o binário existe no PATH
@@ -50,19 +46,17 @@ repair_tool() {
     local name="$1"
     log "  ↺ Reparando: $name"
 
-    # Tenta via plugin
+    # Tenta via plugin (em subshell para não poluir o ambiente)
     local plugin="$HACKLAB_ROOT/tools/plugins/${name}.sh"
     if [[ -f "$plugin" ]]; then
-        source "$plugin"
-        if declare -f install &>/dev/null; then
-            install >> "$LOG" 2>&1 && { step_ok "$name reparado (plugin)"; return 0; }
+        if ( source "$plugin"; declare -f install &>/dev/null && install ) >> "$LOG" 2>&1; then
+            step_ok "$name reparado (plugin)"; return 0
         fi
-        unset -f install update remove check 2>/dev/null || true
     fi
 
     # Tenta via tool-list.conf
     local line
-    line=$(grep -v '^\s*#' "$HACKLAB_ROOT/tools/tool-list.conf" | grep "^${name}:" | head -1)
+    line=$(grep -v '^\s*#' "$HACKLAB_ROOT/tools/tool-list.conf" | grep -F ":" | grep "^${name}:" | head -1)
     if [[ -n "$line" ]]; then
         local cmd_install
         cmd_install=$(echo "$line" | cut -d: -f4)
@@ -99,9 +93,9 @@ print_report() {
 prompt_repair() {
     [[ ${#BROKEN[@]} -eq 0 ]] && return
 
-    local engine
-    command -v dialog   &>/dev/null && engine="dialog"   ||
-    command -v whiptail &>/dev/null && engine="whiptail" || engine="text"
+    local engine="text"
+    command -v dialog   &>/dev/null && engine="dialog"
+    command -v whiptail &>/dev/null && [[ "$engine" == "text" ]] && engine="whiptail"
 
     local do_repair=false
     case "$engine" in

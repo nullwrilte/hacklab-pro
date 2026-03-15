@@ -37,7 +37,8 @@ select_category_dialog() {
     "$ENGINE" --title "Ferramentas: $category" \
               --checklist "Selecione as ferramentas (SPACE = marcar):" \
               20 65 12 "${items[@]}" 2>"$tmp"
-    cat "$tmp"; rm -f "$tmp"
+    local result; result=$(cat "$tmp"); rm -f "$tmp"
+    echo "$result"
 }
 
 select_category_text() {
@@ -72,9 +73,8 @@ select_category_text() {
 select_category_menu() {
     local cat_items=()
     while IFS= read -r cat; do
-        local count installed
+        local count
         count=$(read_tools | cut -d: -f2 | grep -c "^${cat}$" || true)
-        installed=$(grep -c "." "$INSTALLED_DB" 2>/dev/null || echo 0)
         cat_items+=("$cat" "${count} ferramentas")
     done < <(get_categories)
     cat_items+=("all" "Instalar TUDO")
@@ -86,7 +86,8 @@ select_category_menu() {
             "$ENGINE" --title "Categorias" \
                       --menu "Escolha uma categoria:" \
                       20 55 12 "${cat_items[@]}" 2>"$tmp"
-            cat "$tmp"; rm -f "$tmp" ;;
+            local result; result=$(cat "$tmp"); rm -f "$tmp"
+            echo "$result" ;;
         text)
             echo -e "\n${BOLD}Categorias disponíveis:${NC}"
             local i=1 items=("${cat_items[@]}")

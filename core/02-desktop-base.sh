@@ -52,10 +52,9 @@ install_fonts() {
 }
 
 configure_display() {
-    # Configura variável DISPLAY padrão
-    grep -q "DISPLAY" "$HOME/.bashrc" 2>/dev/null || \
+    grep -q '^export DISPLAY=' "$HOME/.bashrc" 2>/dev/null || \
         echo 'export DISPLAY=:0' >> "$HOME/.bashrc"
-    grep -q "PULSE_SERVER" "$HOME/.bashrc" 2>/dev/null || \
+    grep -q '^export PULSE_SERVER=' "$HOME/.bashrc" 2>/dev/null || \
         echo 'export PULSE_SERVER=127.0.0.1' >> "$HOME/.bashrc"
     log "✓ Variáveis de display configuradas"
 }

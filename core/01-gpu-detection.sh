@@ -40,8 +40,7 @@ install_adreno_drivers() {
         log "⚠ mesa-turnip não disponível, tentando mesa padrão..."
         pkg install -y mesa >> "$LOG" 2>&1
     }
-    # Variáveis de ambiente para Adreno
-    cat >> "$PREFIX/etc/profile.d/hacklab-gpu.sh" <<'EOF'
+    cat > "$PREFIX/etc/profile.d/hacklab-gpu.sh" <<'EOF'
 export MESA_LOADER_DRIVER_OVERRIDE=zink
 export TU_DEBUG=noconform
 export EGL_PLATFORM=x11
@@ -53,7 +52,7 @@ EOF
 install_mali_drivers() {
     log "GPU Mali detectada - tentando mesa-mali..."
     pkg install -y mesa >> "$LOG" 2>&1
-    cat >> "$PREFIX/etc/profile.d/hacklab-gpu.sh" <<'EOF'
+    cat > "$PREFIX/etc/profile.d/hacklab-gpu.sh" <<'EOF'
 export EGL_PLATFORM=x11
 export GALLIUM_DRIVER=softpipe
 EOF
@@ -63,7 +62,7 @@ EOF
 install_software_rendering() {
     log "Usando software rendering (llvmpipe)..."
     pkg install -y mesa >> "$LOG" 2>&1
-    cat >> "$PREFIX/etc/profile.d/hacklab-gpu.sh" <<'EOF'
+    cat > "$PREFIX/etc/profile.d/hacklab-gpu.sh" <<'EOF'
 export EGL_PLATFORM=x11
 export GALLIUM_DRIVER=llvmpipe
 export LIBGL_ALWAYS_SOFTWARE=1

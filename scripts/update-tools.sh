@@ -8,8 +8,11 @@ log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
 
 update_pkg() {
     log "Atualizando repositórios e pacotes do sistema..."
-    pkg update -y >> "$LOG" 2>&1 && pkg upgrade -y >> "$LOG" 2>&1
-    log "✓ Sistema atualizado"
+    if pkg update -y >> "$LOG" 2>&1 && pkg upgrade -y >> "$LOG" 2>&1; then
+        log "✓ Sistema atualizado"
+    else
+        log "⚠ Falha ao atualizar sistema (verifique $LOG)"
+    fi
 }
 
 update_pip() {

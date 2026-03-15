@@ -13,7 +13,8 @@ clean_pkg_cache() {
 
 clean_tmp() {
     log "Limpando arquivos temporários..."
-    rm -rf "$TMPDIR"/hacklab-* 2>/dev/null || true
+    local tmpdir="${TMPDIR:-/tmp}"
+    rm -rf "${tmpdir}/hacklab-"* 2>/dev/null || true
     log "✓ Temporários removidos"
 }
 

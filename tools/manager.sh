@@ -51,7 +51,7 @@ field() { echo "$1" | cut -d: -f"$2"; }
 
 is_installed() {
     local name="$1"
-    grep -q "^${name}$" "$INSTALLED_DB" 2>/dev/null
+    grep -qxF "$name" "$INSTALLED_DB" 2>/dev/null
 }
 
 mark_installed() {
@@ -61,7 +61,8 @@ mark_installed() {
 
 mark_removed() {
     local name="$1"
-    sed -i "/^${name}$/d" "$INSTALLED_DB" 2>/dev/null || true
+    grep -vxF "$name" "$INSTALLED_DB" > "${INSTALLED_DB}.tmp" 2>/dev/null && \
+        mv "${INSTALLED_DB}.tmp" "$INSTALLED_DB" || true
 }
 
 # ── Ações ────────────────────────────────────────────────────────────────────
@@ -111,7 +112,9 @@ update_tool() {
     local ok=false
     if is_plugin "$line"; then
         local plugin="$PLUGIN_DIR/${name}.sh"
-        [[ -f "$plugin" ]] && ( source "$plugin"; update ) >> "$LOG" 2>&1 && ok=true
+        if [[ -f "$plugin" ]]; then
+            ( source "$plugin"; update ) >> "$LOG" 2>&1 && ok=true
+        fi
     else
         local cmd_update
         cmd_update=$(field "$line" 5)
@@ -211,7 +214,7 @@ cmd_plugins() {
         local line; line=$(plugin_line "$p")
         local name category desc
         name=$(field "$line" 1); category=$(field "$line" 2); desc=$(field "$line" 3)
-        is_installed "$name" && mark=" ✓" || mark=""
+        is_installed "$name" && local mark=" ✓" || local mark=""
         printf "%-20s %-15s %s%s\n" "$name" "$category" "$desc" "$mark"
     done
 }
@@ -234,10 +237,10 @@ EOF
 }
 
 case "${1:-}" in
-    install-category) cmd_install_category "${2:-}" ;;
+    install-category) [[ -n "${2:-}" ]] || { usage; exit 1; }; cmd_install_category "${2}" ;;
     install)          shift; cmd_install_list "$@" ;;
     update)           cmd_update_all ;;
-    remove)           remove_tool "${2:-}" ;;
+    remove)           [[ -n "${2:-}" ]] || { usage; exit 1; }; remove_tool "${2}" ;;
     list)             cmd_list "${2:-}" ;;
     categories)       cmd_categories ;;
     plugins)          cmd_plugins ;;

@@ -18,13 +18,18 @@ die() { step_err "$*"; exit 1; }
 
 select_desktop() {
     if command -v dialog &>/dev/null; then
+        local tmp result
+        tmp=$(mktemp)
         dialog --title "HACKLAB-PRO" \
                --menu "Escolha o ambiente gráfico:" 12 50 4 \
                "xfce4" "XFCE4 (recomendado, leve)" \
                "lxqt"  "LXQt (moderno, Qt)" \
                "i3"    "i3 (tiling, pouca RAM)" \
                "none"  "Apenas console" \
-               2>/tmp/hacklab_desktop && cat /tmp/hacklab_desktop || echo "xfce4"
+               2>"$tmp"
+        result=$(cat "$tmp"); rm -f "$tmp"
+        echo "${result:-xfce4}"
+        return
     else
         echo -e "\nAmbiente gráfico:"
         echo "  1) XFCE4 (padrão)"
@@ -95,7 +100,7 @@ main() {
         step_ok "GPU configurada"
     else
         step_start "GPU desabilitada pelo usuário"
-        CURRENT_STEP=$(( CURRENT_STEP + 1 ))
+        step_ok "Pulando detecção de GPU"
     fi
 
     if [[ "$desktop" != "none" ]]; then
@@ -107,9 +112,10 @@ main() {
         run_module "03-desktop-env.sh"
         step_ok "Desktop instalado"
     else
-        CURRENT_STEP=$(( CURRENT_STEP + 2 ))
         step_start "Modo console selecionado"
         step_ok "Pulando instalação gráfica"
+        step_start "Pulando ambiente gráfico"
+        step_ok "Nenhum desktop selecionado"
     fi
 
     step_start "Limpeza final"

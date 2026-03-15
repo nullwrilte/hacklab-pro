@@ -11,7 +11,11 @@ stop_desktop() {
     if [[ -f "$pid_file" ]]; then
         local pid
         pid=$(cat "$pid_file")
-        kill "$pid" 2>/dev/null && log "✓ Desktop encerrado (PID $pid)"
+        if [[ "$pid" =~ ^[0-9]+$ ]]; then
+            kill "$pid" 2>/dev/null && log "✓ Desktop encerrado (PID $pid)"
+        else
+            log "⚠ PID inválido em desktop.pid: '$pid'"
+        fi
         rm -f "$pid_file"
     fi
     # Mata processos de desktop conhecidos

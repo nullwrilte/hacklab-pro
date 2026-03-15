@@ -10,16 +10,15 @@ log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
 die() { log "ERRO: $*"; exit 1; }
 
 list_backups() {
-    local backups=()
-    while IFS= read -r f; do
-        backups+=("$f")
-    done < <(find "$BACKUP_DIR" -name "hacklab-backup_*.tar.gz" -type f | sort -r)
-    echo "${backups[@]}"
+    # Imprime um arquivo por linha para preservar espaços nos paths
+    find "$BACKUP_DIR" -name "hacklab-backup_*.tar.gz" -type f | sort -r
 }
 
 select_backup() {
-    local -a backups
-    read -ra backups <<< "$(list_backups)"
+    local -a backups=()
+    while IFS= read -r f; do
+        backups+=("$f")
+    done < <(list_backups)
     [[ ${#backups[@]} -eq 0 ]] && die "Nenhum backup encontrado em $BACKUP_DIR"
 
     if [[ -n "${1:-}" ]]; then
@@ -48,7 +47,7 @@ do_restore() {
     read -rp "Confirmar? [s/N]: " confirm
     [[ "${confirm,,}" == "s" ]] || { echo "Cancelado."; exit 0; }
 
-    tar -xzf "$backup_file" -C / 2>> "$LOG" || die "Falha ao restaurar backup."
+    tar -xzf "$backup_file" -C "$HOME" 2>> "$LOG" || die "Falha ao restaurar backup."
     log "✓ Backup restaurado com sucesso"
     echo "✓ Configurações restauradas. Reinicie o lab para aplicar."
 }

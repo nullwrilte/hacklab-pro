@@ -8,9 +8,6 @@ LOG="$HACKLAB_ROOT/logs/lab.log"
 mkdir -p "$(dirname "$LOG")"
 log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
 
-# Lê preferências
-desktop=$(grep "^DESKTOP=" "$PREFS" 2>/dev/null | cut -d= -f2 || echo "xfce4")
-
 check_termux_x11() {
     if ! command -v termux-x11 &>/dev/null; then
         log "⚠ Termux:X11 não encontrado."
@@ -30,7 +27,9 @@ start_pulseaudio() {
 
 start_dbus() {
     if command -v dbus-daemon &>/dev/null && [[ -z "$DBUS_SESSION_BUS_ADDRESS" ]]; then
-        eval "$(dbus-launch --sh-syntax)" >> "$LOG" 2>&1 || true
+        local dbus_env
+        dbus_env=$(dbus-launch --sh-syntax 2>>"$LOG") || true
+        [[ -n "$dbus_env" ]] && eval "$dbus_env"
         log "✓ dbus iniciado"
     fi
 }
@@ -44,6 +43,7 @@ start_x11() {
 }
 
 start_desktop() {
+    local desktop="$1"
     export DISPLAY=:0
     # Carrega variáveis de GPU se existirem
     [[ -f "$PREFIX/etc/profile.d/hacklab-gpu.sh" ]] && \
@@ -68,11 +68,13 @@ open_termux_x11_app() {
 
 main() {
     log "=== Iniciando HACKLAB-PRO ==="
+    local desktop
+    desktop=$(grep "^DESKTOP=" "$PREFS" 2>/dev/null | cut -d= -f2 || echo "xfce4")
     check_termux_x11
     start_pulseaudio
     start_dbus
     start_x11
-    start_desktop
+    start_desktop "$desktop"
     open_termux_x11_app
     log "=== Lab iniciado. Abra o app Termux:X11 no dispositivo. ==="
     echo -e "\n✓ Lab iniciado! Abra o app \033[1mTermux:X11\033[0m no seu dispositivo."

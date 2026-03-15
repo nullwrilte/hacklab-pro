@@ -11,13 +11,14 @@ log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
 die() { log "ERRO: $*"; exit 1; }
 
 check_storage() {
-    mkdir -p "$BACKUP_DIR" 2>/dev/null || \
-        BACKUP_DIR="$HACKLAB_ROOT/backups" && mkdir -p "$BACKUP_DIR"
+    if ! mkdir -p "$BACKUP_DIR" 2>/dev/null; then
+        BACKUP_DIR="$HACKLAB_ROOT/backups"
+        mkdir -p "$BACKUP_DIR"
+    fi
     BACKUP_FILE="$BACKUP_DIR/hacklab-backup_${TIMESTAMP}.tar.gz"
 }
 
 collect_targets() {
-    # Arquivos e diretórios a incluir no backup
     local targets=()
     [[ -d "$HACKLAB_ROOT/config" ]]   && targets+=("$HACKLAB_ROOT/config")
     [[ -f "$HOME/.bashrc" ]]          && targets+=("$HOME/.bashrc")
@@ -27,12 +28,15 @@ collect_targets() {
     [[ -d "$HOME/.config/pulse" ]]    && targets+=("$HOME/.config/pulse")
     [[ -f "$PREFIX/etc/profile.d/hacklab-gpu.sh" ]] && \
         targets+=("$PREFIX/etc/profile.d/hacklab-gpu.sh")
-    echo "${targets[@]}"
+    # Imprime um item por linha para preservar espaços nos paths
+    printf '%s\n' "${targets[@]}"
 }
 
 do_backup() {
-    local targets
-    read -ra targets <<< "$(collect_targets)"
+    local targets=()
+    while IFS= read -r t; do
+        targets+=("$t")
+    done < <(collect_targets)
     [[ ${#targets[@]} -eq 0 ]] && die "Nenhum arquivo encontrado para backup."
 
     log "Criando backup em: $BACKUP_FILE"
