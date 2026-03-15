@@ -35,7 +35,8 @@ Certifique-se também de ter o **app Termux:X11** instalado no dispositivo.
 
 **Causa:** Phantom Process Killer ativo (Android 12+).
 
-**Solução:** Vá em **Configurações → Opções do Desenvolvedor → Limitar processos em segundo plano → Sem limite**.
+**Solução:** Vá em **Configurações → Opções do Desenvolvedor → Desativar restrições de processos secundário → Ative.
+
 
 Se não aparecer a opção, execute via ADB:
 
