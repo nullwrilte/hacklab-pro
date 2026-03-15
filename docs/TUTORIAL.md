@@ -28,7 +28,7 @@ Vá em **Configurações → Opções do Desenvolvedor → Limitar processos em 
 
 ```bash
 cd ~
-git clone https://github.com/seu-usuario/hacklab-pro
+git clone https://github.com/nullwrilte/hacklab-pro
 cd hacklab-pro
 bash install.sh
 ```
