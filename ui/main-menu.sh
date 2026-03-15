@@ -151,6 +151,30 @@ action_distro() {
     bash "$HACKLAB_ROOT/scripts/distro.sh" menu
 }
 
+action_profiles() {
+    bash "$HACKLAB_ROOT/scripts/profiles.sh" menu
+}
+
+action_sessions() {
+    bash "$HACKLAB_ROOT/scripts/session.sh" menu
+}
+
+action_offline() {
+    bash "$HACKLAB_ROOT/scripts/offline-cache.sh" status
+    local engine="$ENGINE"
+    local choice
+    choice=$(ui_menu "Cache Offline" "O que deseja fazer?" \
+        "cache"   "Baixar pacotes para cache" \
+        "install" "Instalar tudo do cache" \
+        "clear"   "Limpar cache" \
+        "back"    "← Voltar")
+    case "$choice" in
+        cache)   bash "$HACKLAB_ROOT/scripts/offline-cache.sh" cache ;;
+        install) bash "$HACKLAB_ROOT/scripts/offline-cache.sh" install-all ;;
+        clear)   bash "$HACKLAB_ROOT/scripts/offline-cache.sh" clear ;;
+    esac
+}
+
 # ── Loop principal ────────────────────────────────────────────────────────────
 
 main() {
@@ -167,7 +191,10 @@ main() {
             "version" "🟢 Verificar atualizações do projeto" \
             "health"  "🩺 Health Check (verificar + reparar)" \
             "plugins" "🧩 Listar plugins disponíveis" \
-            "backup"  "💾 Fazer backup das configurações" \
+            "profiles" "📍 Perfis de instalação" \
+            "sessions" "💾 Sessões do lab" \
+            "offline"  "📦 Cache offline" \
+            "backup"   "💾 Fazer backup das configurações" \
             "restore" "♻  Restaurar backup" \
             "list"    "📋 Listar ferramentas instaladas" \
             "status"  "ℹ  Status dos serviços" \
@@ -181,8 +208,11 @@ main() {
             version) action_check_update ;;
             health)  action_health_check ;;
             plugins) action_plugins ;;
-            distro)  action_distro ;;
-            backup)  action_backup ;;
+            distro)   action_distro ;;
+            profiles) action_profiles ;;
+            sessions) action_sessions ;;
+            offline)  action_offline ;;
+            backup)   action_backup ;;
             restore) action_restore ;;
             list)    action_list_tools ;;
             status)  action_status ;;

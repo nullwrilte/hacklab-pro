@@ -42,6 +42,8 @@ stop_dbus() {
 
 main() {
     log "=== Encerrando HACKLAB-PRO ==="
+    # Auto-save da sessão antes de parar
+    bash "$HACKLAB_ROOT/scripts/session.sh" autosave 2>/dev/null || true
     stop_desktop
     stop_x11
     stop_pulseaudio
