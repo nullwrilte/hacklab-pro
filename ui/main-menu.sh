@@ -87,6 +87,13 @@ action_update() {
         bash "$HACKLAB_ROOT/scripts/update-tools.sh"
 }
 
+action_check_update() {
+    local result
+    result=$(HACKLAB_ROOT="$HACKLAB_ROOT" VERSION_CONF="$HACKLAB_ROOT/config/version.conf" \
+        bash "$HACKLAB_ROOT/core/version.sh" check 2>&1)
+    ui_msg "Versão" "$result"
+}
+
 action_backup() {
     bash "$HACKLAB_ROOT/scripts/backup-config.sh" && \
         ui_msg "Backup" "Backup criado com sucesso!"
@@ -157,6 +164,7 @@ main() {
             "tools"   "🔧 Instalar / gerenciar ferramentas (fzf)" \
             "distro"  "🐉 Distros Linux (proot-distro)" \
             "update"  "↑  Atualizar tudo" \
+            "version" "🟢 Verificar atualizações do projeto" \
             "health"  "🩺 Health Check (verificar + reparar)" \
             "plugins" "🧩 Listar plugins disponíveis" \
             "backup"  "💾 Fazer backup das configurações" \
@@ -170,6 +178,7 @@ main() {
             stop)    action_stop_lab ;;
             tools)   action_install_tools ;;
             update)  action_update ;;
+            version) action_check_update ;;
             health)  action_health_check ;;
             plugins) action_plugins ;;
             distro)  action_distro ;;

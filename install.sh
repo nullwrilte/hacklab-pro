@@ -206,6 +206,10 @@ main() {
     # Salva preferências no disco
     save_preferences "$desktop" "$wine" "$gpu" "$tools"
 
+    # Registra versão instalada
+    HACKLAB_ROOT="$HACKLAB_ROOT" VERSION_CONF="$HACKLAB_ROOT/config/version.conf" \
+        bash "$HACKLAB_ROOT/core/version.sh" save
+
     echo ""
 
     # Calcula número real de steps conforme opções
@@ -275,6 +279,7 @@ main() {
     echo -e "  GPU accel  : ${CYAN}$gpu${NC}"
     echo -e "  Wine       : ${CYAN}$wine${NC}"
     echo -e "  Ferramentas: ${CYAN}$tools${NC}"
+    echo -e "  Versão     : ${CYAN}$(grep '^VERSION=' "$HACKLAB_ROOT/config/version.conf" 2>/dev/null | cut -d= -f2)${NC}"
     echo -e "  Log        : ${CYAN}$LOG${NC}\n"
     echo -e "  Para iniciar : ${BOLD}bash $HACKLAB_ROOT/scripts/start-lab.sh${NC}"
     echo -e "  Menu         : ${BOLD}bash $HACKLAB_ROOT/ui/main-menu.sh${NC}\n"

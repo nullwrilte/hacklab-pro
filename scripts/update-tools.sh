@@ -37,8 +37,18 @@ run_health_check() {
         log "⚠ Ferramentas com problema detectadas — execute health-check manualmente para reparar"
 }
 
+check_project_update() {
+    log "Verificando atualizações do HACKLAB-PRO..."
+    HACKLAB_ROOT="$HACKLAB_ROOT" VERSION_CONF="$HACKLAB_ROOT/config/version.conf" \
+        bash "$HACKLAB_ROOT/core/version.sh" check || true
+    # Aplica migrações de configuração se necessário
+    HACKLAB_ROOT="$HACKLAB_ROOT" VERSION_CONF="$HACKLAB_ROOT/config/version.conf" \
+        bash "$HACKLAB_ROOT/core/version.sh" migrate 2>/dev/null || true
+}
+
 main() {
     log "=== Atualização Iniciada ==="
+    check_project_update
     update_pkg
     update_pip
     update_tools

@@ -30,6 +30,8 @@ step_warn() { echo -e " ${YELLOW}⚠${NC} $1"; }
 step_err()  { echo -e " ${RED}✗${NC} $1"; }
 
 banner() {
+    local _ver
+    _ver=$(grep '^VERSION=' "${HACKLAB_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/config/version.conf" 2>/dev/null | cut -d= -f2)
     echo -e "${BOLD}${CYAN}"
     cat <<'EOF'
  _   _    _    ____ _  ____      _    ____       ____  ____   ___
@@ -39,5 +41,5 @@ banner() {
 |_| |_/_/   \_\____|_|\_\   \/   |   |_|        |_|   |_| \_\\___/
 EOF
     echo -e "${NC}"
-    echo -e "${YELLOW}  Ambiente Linux de Segurança para Android${NC}\n"
+    echo -e "${YELLOW}  Ambiente Linux de Segurança para Android${NC}  ${CYAN}v${_ver:-dev}${NC}\n"
 }
