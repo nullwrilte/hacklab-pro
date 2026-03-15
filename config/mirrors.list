@@ -1,0 +1,28 @@
+# mirrors.list - Espelhos para downloads do HACKLAB-PRO
+# Formato: prioridade|url|região|descrição
+# Menor número = maior prioridade
+# O instalador testa latência e usa o mais rápido disponível
+
+# ── Termux (pacotes principais) ───────────────────────────────────────────────
+1|https://packages.termux.dev/apt/termux-main|global|Repositório oficial Termux
+2|https://termux.cdn.lumito.net/apt/termux-main|global|CDN Lumito (espelho rápido)
+3|https://mirror.mwt.me/termux/main|global|Mirror MWT
+4|https://ftp.fau.de/termux/termux-packages-24|eu|Universidade Erlangen (DE)
+5|https://mirrors.tuna.tsinghua.edu.cn/termux/apt/termux-main|asia|Tsinghua University (CN)
+
+# ── Termux X11 ────────────────────────────────────────────────────────────────
+1|https://packages.termux.dev/apt/termux-x11|global|Repositório oficial X11
+2|https://termux.cdn.lumito.net/apt/termux-x11|global|CDN Lumito X11
+
+# ── Termux Root (ferramentas extras) ─────────────────────────────────────────
+1|https://packages.termux.dev/apt/termux-root|global|Repositório Root oficial
+2|https://termux.cdn.lumito.net/apt/termux-root|global|CDN Lumito Root
+
+# ── PyPI (pacotes Python) ─────────────────────────────────────────────────────
+1|https://pypi.org/simple|global|PyPI oficial
+2|https://pypi.tuna.tsinghua.edu.cn/simple|asia|Tsinghua PyPI mirror
+3|https://mirrors.aliyun.com/pypi/simple|asia|Aliyun PyPI mirror
+
+# ── GitHub (ferramentas via curl/git) ────────────────────────────────────────
+1|https://raw.githubusercontent.com|global|GitHub raw content
+2|https://github.com|global|GitHub releases
