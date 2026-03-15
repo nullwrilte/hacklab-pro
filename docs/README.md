@@ -16,7 +16,7 @@ Ambiente Linux de segurança ofensiva e defensiva rodando nativamente no Android
 ```bash
 termux-setup-storage
 cd ~
-git clone https://github.com/seu-usuario/hacklab-pro
+git clone https://github.com/nullwrilte/hacklab-pro
 cd hacklab-pro
 bash install.sh
 ```
