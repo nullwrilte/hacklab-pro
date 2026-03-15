@@ -4,8 +4,6 @@
 HACKLAB_ROOT="${HACKLAB_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 LOG="$HACKLAB_ROOT/logs/install.log"
 BACKUP_DIR="${HOME}/storage/shared/hacklab-backups"
-TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
-BACKUP_FILE="$BACKUP_DIR/hacklab-backup_${TIMESTAMP}.tar.gz"
 
 log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
 die() { log "ERRO: $*"; exit 1; }
@@ -15,6 +13,7 @@ check_storage() {
         BACKUP_DIR="$HACKLAB_ROOT/backups"
         mkdir -p "$BACKUP_DIR"
     fi
+    TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
     BACKUP_FILE="$BACKUP_DIR/hacklab-backup_${TIMESTAMP}.tar.gz"
 }
 

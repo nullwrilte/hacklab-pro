@@ -28,9 +28,15 @@ plugin_line() {
     local plugin="$1"
     local name category desc
     name=$(basename "$plugin" .sh)
-    # Carrega metadados do plugin em subshell para não poluir o ambiente
-    category=$(bash -c "source '$plugin' 2>/dev/null; echo \"\${PLUGIN_CATEGORY:-plugin}\"")
-    desc=$(bash    -c "source '$plugin' 2>/dev/null; echo \"\${PLUGIN_DESC:-Plugin externo}\"")
+    # Carrega metadados em subshell única para não poluir o ambiente e evitar problema com aspas no path
+    local meta
+    meta=$(bash --norc --noprofile -c "
+        source $(printf '%q' "$plugin") 2>/dev/null
+        echo \"\${PLUGIN_CATEGORY:-plugin}\"
+        echo \"\${PLUGIN_DESC:-Plugin externo}\"
+    " 2>/dev/null)
+    category=$(echo "$meta" | head -1)
+    desc=$(echo "$meta" | tail -1)
     echo "${name}:${category}:${desc}:__plugin__:__plugin__"
 }
 

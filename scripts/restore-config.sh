@@ -35,6 +35,10 @@ select_backup() {
 
     read -rp "Escolha o backup [1]: " choice
     local idx=$(( ${choice:-1} - 1 ))
+    if [[ ! "${choice:-1}" =~ ^[0-9]+$ ]] || (( idx < 0 || idx >= ${#backups[@]} )); then
+        log "⚠ Opção inválida, usando backup mais recente"
+        idx=0
+    fi
     echo "${backups[$idx]}"
 }
 

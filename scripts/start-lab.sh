@@ -36,9 +36,17 @@ start_dbus() {
 
 start_x11() {
     export DISPLAY=:0
-    # Inicia Termux:X11 em background
     termux-x11 :0 -ac >> "$LOG" 2>&1 &
-    sleep 2
+    # Aguarda o display ficar disponível (máx 10s)
+    local i=0
+    while (( i < 10 )); do
+        xdpyinfo -display :0 &>/dev/null && break
+        sleep 1
+        (( i++ )) || true
+    done
+    if ! xdpyinfo -display :0 &>/dev/null; then
+        log "⚠ Termux:X11 não respondeu em 10s, continuando mesmo assim..."
+    fi
     log "✓ Termux:X11 iniciado (DISPLAY=:0)"
 }
 

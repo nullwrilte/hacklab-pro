@@ -20,7 +20,7 @@ Baixe o APK do [Termux:X11](https://github.com/termux/termux-x11/releases) e ins
 
 ### 1.3 Android 12 ou superior
 
-Vá em **Configurações → Opções do Desenvolvedor → Limitar processos em segundo plano** e selecione **Sem limite**. Isso evita que o Android mate o processo do X11.
+Vá em **Configurações → Opções do Desenvolvedor → Desativar restrições de processos secundário → Ative**. Isso evita que o Android mate o processo do X11.
 
 ---
 
