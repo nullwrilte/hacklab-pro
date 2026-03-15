@@ -5,6 +5,7 @@ HACKLAB_ROOT="${HACKLAB_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 LOG="$HACKLAB_ROOT/logs/lab.log"
 
 log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
+source "$HACKLAB_ROOT/scripts/audit.sh" 2>/dev/null || true
 
 stop_desktop() {
     local pid_file="$HACKLAB_ROOT/logs/desktop.pid"

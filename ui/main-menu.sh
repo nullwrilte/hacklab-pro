@@ -17,13 +17,12 @@ ENGINE=$(menu_engine)
 # ── Wrappers de UI ────────────────────────────────────────────────────────────
 
 ui_menu() {
-    # ui_menu "título" "prompt" item1 desc1 item2 desc2 ...
     local title="$1" prompt="$2"; shift 2
     local tmp; tmp=$(mktemp)
     case "$ENGINE" in
         dialog|whiptail)
             "$ENGINE" --clear --title "$title" \
-                      --menu "$prompt" 20 60 10 "$@" 2>"$tmp"
+                      --menu "$prompt" 22 65 14 "$@" 2>"$tmp"
             local result; result=$(cat "$tmp"); rm -f "$tmp"
             echo "${result}" ;;
         text)
@@ -34,7 +33,6 @@ ui_menu() {
                 (( i+=2 ))
             done
             read -rp "Escolha: " opt
-            # Retorna o valor (chave) correspondente ao número
             local idx=$(( (opt-1)*2 ))
             echo "${items[$idx]}" ;;
     esac
@@ -116,8 +114,8 @@ action_list_tools() {
 
 action_status() {
     local x11_status desktop_status pulse_status
-    pgrep -x termux-x11  &>/dev/null && x11_status="✓ rodando" || x11_status="✗ parado"
-    pgrep -x pulseaudio  &>/dev/null && pulse_status="✓ rodando" || pulse_status="✗ parado"
+    pgrep -x termux-x11 &>/dev/null && x11_status="✓ rodando" || x11_status="✗ parado"
+    pgrep -x pulseaudio &>/dev/null && pulse_status="✓ rodando" || pulse_status="✗ parado"
     local desktop
     desktop=$(grep "^DESKTOP=" "$PREFS" 2>/dev/null | head -1 | cut -d= -f2 || echo "xfce4")
     if pgrep -x "${desktop}-session" &>/dev/null || pgrep -x "$desktop" &>/dev/null; then
@@ -125,7 +123,6 @@ action_status() {
     else
         desktop_status="✗ parado"
     fi
-
     ui_msg "Status do Lab" \
 "Termux:X11 : $x11_status
 Desktop    : $desktop_status ($desktop)
@@ -147,21 +144,12 @@ action_plugins() {
     esac
 }
 
-action_distro() {
-    bash "$HACKLAB_ROOT/scripts/distro.sh" menu
-}
-
-action_profiles() {
-    bash "$HACKLAB_ROOT/scripts/profiles.sh" menu
-}
-
-action_sessions() {
-    bash "$HACKLAB_ROOT/scripts/session.sh" menu
-}
+action_distro()    { bash "$HACKLAB_ROOT/scripts/distro.sh"   menu; }
+action_profiles()  { bash "$HACKLAB_ROOT/scripts/profiles.sh" menu; }
+action_sessions()  { bash "$HACKLAB_ROOT/scripts/session.sh"  menu; }
 
 action_offline() {
     bash "$HACKLAB_ROOT/scripts/offline-cache.sh" status
-    local engine="$ENGINE"
     local choice
     choice=$(ui_menu "Cache Offline" "O que deseja fazer?" \
         "cache"   "Baixar pacotes para cache" \
@@ -175,6 +163,51 @@ action_offline() {
     esac
 }
 
+action_dashboard() { bash "$HACKLAB_ROOT/ui/dashboard.sh"; }
+
+action_checksum() {
+    local choice
+    choice=$(ui_menu "Checksums" "O que deseja fazer?" \
+        "verify-all" "Verificar todos os binários" \
+        "register"   "Registrar binários instalados" \
+        "list"       "Listar checksums" \
+        "back"       "← Voltar")
+    case "$choice" in
+        verify-all) bash "$HACKLAB_ROOT/scripts/checksum.sh" verify ;;
+        register)   bash "$HACKLAB_ROOT/scripts/checksum.sh" register-all ;;
+        list)       bash "$HACKLAB_ROOT/scripts/checksum.sh" list | less ;;
+    esac
+}
+
+action_sandbox() {
+    bash "$HACKLAB_ROOT/scripts/sandbox.sh" status
+    local choice
+    choice=$(ui_menu "Sandbox" "O que deseja fazer?" \
+        "shell" "Abrir shell isolado" \
+        "clean" "Limpar sandbox" \
+        "back"  "← Voltar")
+    case "$choice" in
+        shell) bash "$HACKLAB_ROOT/scripts/sandbox.sh" shell ;;
+        clean) bash "$HACKLAB_ROOT/scripts/sandbox.sh" clean ;;
+    esac
+}
+
+action_audit() {
+    local choice
+    choice=$(ui_menu "Auditoria" "O que deseja fazer?" \
+        "show"   "Ver últimos 50 eventos" \
+        "stats"  "Estatísticas" \
+        "export" "Exportar log" \
+        "clear"  "Limpar log" \
+        "back"   "← Voltar")
+    case "$choice" in
+        show)   bash "$HACKLAB_ROOT/scripts/audit.sh" show   | less -R ;;
+        stats)  bash "$HACKLAB_ROOT/scripts/audit.sh" stats ;;
+        export) bash "$HACKLAB_ROOT/scripts/audit.sh" export ;;
+        clear)  bash "$HACKLAB_ROOT/scripts/audit.sh" clear ;;
+    esac
+}
+
 # ── Loop principal ────────────────────────────────────────────────────────────
 
 main() {
@@ -183,40 +216,48 @@ main() {
 
         local choice
         choice=$(ui_menu "HACKLAB-PRO" "O que deseja fazer?" \
-            "start"   "▶  Iniciar Lab (desktop + serviços)" \
-            "stop"    "■  Parar Lab" \
-            "tools"   "🔧 Instalar / gerenciar ferramentas (fzf)" \
-            "distro"  "🐉 Distros Linux (proot-distro)" \
-            "update"  "↑  Atualizar tudo" \
-            "version" "🟢 Verificar atualizações do projeto" \
-            "health"  "🩺 Health Check (verificar + reparar)" \
-            "plugins" "🧩 Listar plugins disponíveis" \
-            "profiles" "📍 Perfis de instalação" \
-            "sessions" "💾 Sessões do lab" \
-            "offline"  "📦 Cache offline" \
-            "backup"   "💾 Fazer backup das configurações" \
-            "restore" "♻  Restaurar backup" \
-            "list"    "📋 Listar ferramentas instaladas" \
-            "status"  "ℹ  Status dos serviços" \
-            "exit"    "✗  Sair")
+            "start"     "▶  Iniciar Lab (desktop + serviços)" \
+            "stop"      "■  Parar Lab" \
+            "dashboard" "📊 Dashboard em tempo real" \
+            "tools"     "🔧 Instalar / gerenciar ferramentas" \
+            "distro"    "🐉 Distros Linux (proot-distro)" \
+            "update"    "↑  Atualizar tudo" \
+            "version"   "🟢 Verificar atualizações do projeto" \
+            "health"    "🩺 Health Check (verificar + reparar)" \
+            "checksum"  "🔒 Verificar integridade (checksums)" \
+            "sandbox"   "📦 Sandbox (execução isolada)" \
+            "audit"     "📋 Auditoria de ações" \
+            "plugins"   "🧩 Listar plugins disponíveis" \
+            "profiles"  "📍 Perfis de instalação" \
+            "sessions"  "💾 Sessões do lab" \
+            "offline"   "📦 Cache offline" \
+            "backup"    "💾 Fazer backup das configurações" \
+            "restore"   "♻  Restaurar backup" \
+            "list"      "📋 Listar ferramentas instaladas" \
+            "status"    "ℹ  Status dos serviços" \
+            "exit"      "✗  Sair")
 
         case "$choice" in
-            start)   action_start_lab ;;
-            stop)    action_stop_lab ;;
-            tools)   action_install_tools ;;
-            update)  action_update ;;
-            version) action_check_update ;;
-            health)  action_health_check ;;
-            plugins) action_plugins ;;
-            distro)   action_distro ;;
-            profiles) action_profiles ;;
-            sessions) action_sessions ;;
-            offline)  action_offline ;;
-            backup)   action_backup ;;
-            restore) action_restore ;;
-            list)    action_list_tools ;;
-            status)  action_status ;;
-            exit|"") break ;;
+            start)     action_start_lab ;;
+            stop)      action_stop_lab ;;
+            dashboard) action_dashboard ;;
+            tools)     action_install_tools ;;
+            distro)    action_distro ;;
+            update)    action_update ;;
+            version)   action_check_update ;;
+            health)    action_health_check ;;
+            checksum)  action_checksum ;;
+            sandbox)   action_sandbox ;;
+            audit)     action_audit ;;
+            plugins)   action_plugins ;;
+            profiles)  action_profiles ;;
+            sessions)  action_sessions ;;
+            offline)   action_offline ;;
+            backup)    action_backup ;;
+            restore)   action_restore ;;
+            list)      action_list_tools ;;
+            status)    action_status ;;
+            exit|"")   break ;;
         esac
     done
 }

@@ -7,6 +7,7 @@ LOG="$HACKLAB_ROOT/logs/lab.log"
 
 mkdir -p "$(dirname "$LOG")"
 log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
+source "$HACKLAB_ROOT/scripts/audit.sh" 2>/dev/null || true
 
 check_termux_x11() {
     if ! command -v termux-x11 &>/dev/null; then

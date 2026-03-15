@@ -10,6 +10,7 @@ source "$HACKLAB_ROOT/ui/progress-bar.sh" 2>/dev/null || true
 
 log()  { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }
 die()  { log "ERRO: $*"; exit 1; }
+source "$HACKLAB_ROOT/scripts/audit.sh" 2>/dev/null || true
 
 [[ -f "$TOOL_LIST" ]] || die "tool-list.conf não encontrado: $TOOL_LIST"
 mkdir -p "$(dirname "$INSTALLED_DB")" "$(dirname "$LOG")"
