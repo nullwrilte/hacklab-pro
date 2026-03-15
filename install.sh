@@ -32,7 +32,6 @@ die() {
 
 cleanup_on_exit() {
     local code=$?
-    # Restaura cursor e limpa linha de progresso se necessário
     tput cnorm 2>/dev/null || true
     [[ $code -ne 0 ]] && echo -e "\n${YELLOW}⚠ Instalação interrompida (código $code).${NC}" >&2
 }
@@ -77,7 +76,6 @@ select_desktop() {
     if [[ "$engine" == "dialog" ]]; then
         local tmp result
         tmp=$(mktemp)
-        # dialog escreve a escolha em stderr; stdout vai para o log via exec
         dialog --title "HACKLAB-PRO — Desktop" \
                --menu "Escolha o ambiente gráfico:" 12 55 4 \
                "xfce4" "XFCE4 (recomendado, leve)" \
@@ -104,7 +102,8 @@ select_desktop() {
 select_options() {
     # Retorna variáveis via stdout no formato KEY=VALUE, uma por linha.
     # Lê do /dev/tty para não ser afetado pelo exec > >(tee).
-    local wine="false" gpu="true" wine_input gpu_input
+    local wine="false" gpu="true" tools="essential"
+    local wine_input gpu_input tools_input
 
     echo -e "\n${BOLD}Opções adicionais:${NC}" >/dev/tty
     read -rp "  Ativar suporte a Wine (.exe)? [s/N]: " wine_input </dev/tty
@@ -113,21 +112,61 @@ select_options() {
     read -rp "  Ativar aceleração de GPU? [S/n]: " gpu_input </dev/tty
     [[ "${gpu_input,,}" == "n" ]] && gpu="false"
 
+    echo -e "\n${BOLD}Instalar ferramentas de segurança?${NC}" >/dev/tty
+    echo "  1) Todas  — network, web, exploitation, password, wireless, reverse, utils, desktop" >/dev/tty
+    echo "  2) Essenciais — network, web, utils, desktop (VS Code + Firefox)  [padrão]" >/dev/tty
+    echo "  3) Interativo — escolher por categoria após a instalação" >/dev/tty
+    echo "  4) Pular  — instalar depois com: bash tools/manager.sh" >/dev/tty
+    read -rp "  Escolha [2]: " tools_input </dev/tty
+    case "${tools_input:-2}" in
+        1) tools="all" ;;
+        2) tools="essential" ;;
+        3) tools="interactive" ;;
+        *) tools="skip" ;;
+    esac
+
     echo "WINE=$wine"
     echo "GPU_ACCEL=$gpu"
+    echo "TOOLS=$tools"
 }
 
 save_preferences() {
-    local desktop="$1" wine="$2" gpu="$3"
+    local desktop="$1" wine="$2" gpu="$3" tools="$4"
     mkdir -p "$(dirname "$PREFS")"
     cat > "$PREFS" <<EOF
 # user-preferences.conf — gerado por install.sh em $(date '+%Y-%m-%d %H:%M:%S')
 DESKTOP=$desktop
 WINE=$wine
 GPU_ACCEL=$gpu
+TOOLS=$tools
 INSTALL_DATE=$(date '+%Y-%m-%d %H:%M:%S')
 EOF
-    log "Preferências salvas: DESKTOP=$desktop WINE=$wine GPU_ACCEL=$gpu"
+    log "Preferências salvas: DESKTOP=$desktop WINE=$wine GPU_ACCEL=$gpu TOOLS=$tools"
+}
+
+# ── Instalação de ferramentas ─────────────────────────────────────────────────
+
+ALL_CATEGORIES=(network web exploitation password wireless reverse utils desktop)
+ESSENTIAL_CATEGORIES=(network web utils desktop)
+
+install_tools_auto() {
+    local mode="$1"
+    local categories=()
+
+    case "$mode" in
+        all)       categories=("${ALL_CATEGORIES[@]}") ;;
+        essential) categories=("${ESSENTIAL_CATEGORIES[@]}") ;;
+        *)         return 0 ;;
+    esac
+
+    local total=${#categories[@]}
+    local i=0
+    for cat in "${categories[@]}"; do
+        (( i++ )) || true
+        log "[$i/$total] Instalando categoria: $cat"
+        HACKLAB_ROOT="$HACKLAB_ROOT" bash "$HACKLAB_ROOT/tools/manager.sh" install-category "$cat" \
+            || step_warn "Categoria '$cat' teve falhas (verifique $LOG)"
+    done
 }
 
 # ── Orquestrador de módulos ───────────────────────────────────────────────────
@@ -137,7 +176,6 @@ run_module() {
     local script="$HACKLAB_ROOT/core/$name"
     [[ -f "$script" ]] || die "Módulo não encontrado: $script"
     chmod +x "$script"
-    # Exporta HACKLAB_ROOT para que os módulos o encontrem
     HACKLAB_ROOT="$HACKLAB_ROOT" bash "$script" || die "Falha no módulo: $name"
 }
 
@@ -154,24 +192,27 @@ main() {
     check_reinstall
 
     # Coleta todas as preferências antes de iniciar (leitura de /dev/tty)
-    local desktop wine gpu
+    local desktop
     desktop=$(select_desktop)
 
     # select_options retorna KEY=VALUE; extrai cada valor
     local opts
     opts=$(select_options)
-    wine=$(echo "$opts" | grep "^WINE="    | cut -d= -f2)
-    gpu=$(echo  "$opts" | grep "^GPU_ACCEL=" | cut -d= -f2)
+    local wine gpu tools
+    wine=$(echo  "$opts" | grep "^WINE="      | cut -d= -f2)
+    gpu=$(echo   "$opts" | grep "^GPU_ACCEL=" | cut -d= -f2)
+    tools=$(echo "$opts" | grep "^TOOLS="     | cut -d= -f2)
 
     # Salva preferências no disco
-    save_preferences "$desktop" "$wine" "$gpu"
+    save_preferences "$desktop" "$wine" "$gpu" "$tools"
 
     echo ""
 
     # Calcula número real de steps conforme opções
-    local steps=3  # ambiente + base + cleanup
+    local steps=3  # ambiente + cleanup + ferramentas
     [[ "$gpu"     != "false" ]] && (( steps++ ))
-    [[ "$desktop" != "none"  ]] && (( steps++ ))
+    [[ "$desktop" != "none"  ]] && (( steps += 2 ))
+    [[ "$tools"   != "skip" && "$tools" != "interactive" ]] && (( steps++ ))
     TOTAL_STEPS=$steps
     CURRENT_STEP=0
 
@@ -202,25 +243,41 @@ main() {
         step_warn "Modo console — instalação gráfica ignorada"
     fi
 
-    # ── Step final: Wine (se habilitado, dentro do cleanup)
-    step_start "Limpeza e finalização"
+    # ── Step: Wine (se habilitado)
     if [[ "$wine" == "true" ]]; then
         log "Instalando Wine..."
         pkg install -y wine >> "$LOG" 2>&1 && step_ok "Wine instalado" || step_warn "Wine: falha na instalação"
     fi
+
+    # ── Step: Ferramentas automáticas
+    if [[ "$tools" == "all" || "$tools" == "essential" ]]; then
+        step_start "Instalando ferramentas ($tools)"
+        install_tools_auto "$tools"
+        step_ok "Ferramentas instaladas"
+    fi
+
+    # ── Step: Limpeza final
+    step_start "Limpeza e finalização"
     run_module "99-cleanup.sh"
     step_ok "Concluído"
+
+    # ── Instalação interativa (fora dos steps, após tudo)
+    if [[ "$tools" == "interactive" ]]; then
+        echo -e "\n${BOLD}Abrindo seleção interativa de ferramentas...${NC}"
+        bash "$HACKLAB_ROOT/ui/select-tools.sh"
+    fi
 
     # ── Resumo final
     echo -e "\n${GREEN}${BOLD}╔══════════════════════════════════════╗${NC}"
     echo -e "${GREEN}${BOLD}║  ✓ HACKLAB-PRO instalado com sucesso ║${NC}"
     echo -e "${GREEN}${BOLD}╚══════════════════════════════════════╝${NC}\n"
-    echo -e "  Desktop  : ${CYAN}$desktop${NC}"
-    echo -e "  GPU accel: ${CYAN}$gpu${NC}"
-    echo -e "  Wine     : ${CYAN}$wine${NC}"
-    echo -e "  Log      : ${CYAN}$LOG${NC}\n"
-    echo -e "  Para iniciar: ${BOLD}bash $HACKLAB_ROOT/scripts/start-lab.sh${NC}"
-    echo -e "  Menu      : ${BOLD}bash $HACKLAB_ROOT/ui/main-menu.sh${NC}\n"
+    echo -e "  Desktop    : ${CYAN}$desktop${NC}"
+    echo -e "  GPU accel  : ${CYAN}$gpu${NC}"
+    echo -e "  Wine       : ${CYAN}$wine${NC}"
+    echo -e "  Ferramentas: ${CYAN}$tools${NC}"
+    echo -e "  Log        : ${CYAN}$LOG${NC}\n"
+    echo -e "  Para iniciar : ${BOLD}bash $HACKLAB_ROOT/scripts/start-lab.sh${NC}"
+    echo -e "  Menu         : ${BOLD}bash $HACKLAB_ROOT/ui/main-menu.sh${NC}\n"
 }
 
 main "$@"

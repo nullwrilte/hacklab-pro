@@ -135,7 +135,9 @@ main() {
                 bash "$HACKLAB_ROOT/tools/manager.sh" install-category password
                 bash "$HACKLAB_ROOT/tools/manager.sh" install-category wireless
                 bash "$HACKLAB_ROOT/tools/manager.sh" install-category reverse
+                bash "$HACKLAB_ROOT/tools/manager.sh" install-category windows
                 bash "$HACKLAB_ROOT/tools/manager.sh" install-category utils
+                bash "$HACKLAB_ROOT/tools/manager.sh" install-category desktop
                 ;;
             *)
                 local selected_str
