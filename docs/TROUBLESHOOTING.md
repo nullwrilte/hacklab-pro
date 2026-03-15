@@ -37,14 +37,6 @@ Certifique-se também de ter o **app Termux:X11** instalado no dispositivo.
 
 **Solução:** Vá em **Configurações** → Opções do Desenvolvedor → Desativar restrições de processos secundário → Ative.
 
-
-Se não aparecer a opção, execute via ADB:
-
-```bash
-adb shell device_config set_sync_disabled_for_tests persistent
-adb shell device_config put activity_manager max_phantom_processes 2147483647
-```
-
 ---
 
 ## Sem som / PulseAudio não inicia
