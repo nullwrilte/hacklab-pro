@@ -117,6 +117,21 @@ Desktop    : $desktop_status ($desktop)
 PulseAudio : $pulse_status"
 }
 
+action_health_check() {
+    bash "$HACKLAB_ROOT/tools/health-check.sh"
+}
+
+action_plugins() {
+    local output
+    output=$(bash "$HACKLAB_ROOT/tools/manager.sh" plugins 2>/dev/null)
+    case "$ENGINE" in
+        dialog|whiptail)
+            echo "$output" | "$ENGINE" --title "Plugins" --programbox 20 70 ;;
+        text)
+            echo "$output" | less ;;
+    esac
+}
+
 # ── Loop principal ────────────────────────────────────────────────────────────
 
 main() {
@@ -129,6 +144,8 @@ main() {
             "stop"    "■  Parar Lab" \
             "tools"   "🔧 Instalar / gerenciar ferramentas" \
             "update"  "↑  Atualizar tudo" \
+            "health"  "🩺 Health Check (verificar + reparar)" \
+            "plugins" "🧩 Listar plugins disponíveis" \
             "backup"  "💾 Fazer backup das configurações" \
             "restore" "♻  Restaurar backup" \
             "list"    "📋 Listar ferramentas instaladas" \
@@ -140,6 +157,8 @@ main() {
             stop)    action_stop_lab ;;
             tools)   action_install_tools ;;
             update)  action_update ;;
+            health)  action_health_check ;;
+            plugins) action_plugins ;;
             backup)  action_backup ;;
             restore) action_restore ;;
             list)    action_list_tools ;;

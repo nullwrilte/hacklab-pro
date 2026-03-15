@@ -27,11 +27,19 @@ update_tools() {
     bash "$HACKLAB_ROOT/tools/manager.sh" update
 }
 
+run_health_check() {
+    log "Verificando integridade das ferramentas..."
+    bash "$HACKLAB_ROOT/tools/health-check.sh" --silent && \
+        log "✓ Todas as ferramentas saudáveis" || \
+        log "⚠ Ferramentas com problema detectadas — execute health-check manualmente para reparar"
+}
+
 main() {
     log "=== Atualização Iniciada ==="
     update_pkg
     update_pip
     update_tools
+    run_health_check
     log "=== Atualização Concluída ==="
     echo "✓ Tudo atualizado. Veja detalhes em: $LOG"
 }

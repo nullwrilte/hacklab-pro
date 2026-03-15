@@ -14,12 +14,37 @@ die()  { log "ERRO: $*"; exit 1; }
 [[ -f "$TOOL_LIST" ]] || die "tool-list.conf não encontrado: $TOOL_LIST"
 mkdir -p "$(dirname "$INSTALLED_DB")" "$(dirname "$LOG")"
 
+PLUGIN_DIR="$HACKLAB_ROOT/tools/plugins"
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 # Lê linhas válidas do conf (ignora comentários e vazias)
 read_tools() {
     grep -v '^\s*#' "$TOOL_LIST" | grep -v '^\s*$'
 }
+
+# Retorna linha sintética para um plugin: nome:categoria:desc:install:update
+plugin_line() {
+    local plugin="$1"
+    local name category desc
+    name=$(basename "$plugin" .sh)
+    # Carrega metadados do plugin em subshell para não poluir o ambiente
+    category=$(bash -c "source '$plugin' 2>/dev/null; echo \"\${PLUGIN_CATEGORY:-plugin}\"")
+    desc=$(bash    -c "source '$plugin' 2>/dev/null; echo \"\${PLUGIN_DESC:-Plugin externo}\"")
+    echo "${name}:${category}:${desc}:__plugin__:__plugin__"
+}
+
+# Lê todas as ferramentas: conf + plugins
+read_all_tools() {
+    read_tools
+    [[ -d "$PLUGIN_DIR" ]] || return 0
+    local p
+    for p in "$PLUGIN_DIR"/*.sh; do
+        [[ -f "$p" ]] && plugin_line "$p"
+    done
+}
+
+is_plugin() { [[ "$(field "$1" 4)" == "__plugin__" ]]; }
 
 # Retorna campo N (1-based) de uma linha do conf
 field() { echo "$1" | cut -d: -f"$2"; }
@@ -43,11 +68,10 @@ mark_removed() {
 
 install_tool() {
     local line="$1"
-    local name category desc cmd_install
+    local name category desc
     name=$(field "$line" 1)
     category=$(field "$line" 2)
     desc=$(field "$line" 3)
-    cmd_install=$(field "$line" 4)
 
     if is_installed "$name"; then
         log "  ↷ $name já instalado, pulando"
@@ -55,7 +79,20 @@ install_tool() {
     fi
 
     log "  ▶ Instalando $name ($category) — $desc"
-    if eval "$cmd_install" >> "$LOG" 2>&1; then
+
+    local ok=false
+    if is_plugin "$line"; then
+        local plugin="$PLUGIN_DIR/${name}.sh"
+        if [[ -f "$plugin" ]]; then
+            ( source "$plugin"; install ) >> "$LOG" 2>&1 && ok=true
+        fi
+    else
+        local cmd_install
+        cmd_install=$(field "$line" 4)
+        eval "$cmd_install" >> "$LOG" 2>&1 && ok=true
+    fi
+
+    if $ok; then
         mark_installed "$name"
         step_ok "$name instalado"
     else
@@ -65,25 +102,42 @@ install_tool() {
 
 update_tool() {
     local line="$1"
-    local name cmd_update
+    local name
     name=$(field "$line" 1)
-    cmd_update=$(field "$line" 5)
 
     is_installed "$name" || return 0
 
     log "  ↑ Atualizando $name"
-    if eval "$cmd_update" >> "$LOG" 2>&1; then
-        step_ok "$name atualizado"
+    local ok=false
+    if is_plugin "$line"; then
+        local plugin="$PLUGIN_DIR/${name}.sh"
+        [[ -f "$plugin" ]] && ( source "$plugin"; update ) >> "$LOG" 2>&1 && ok=true
     else
-        step_warn "$name: falha na atualização"
+        local cmd_update
+        cmd_update=$(field "$line" 5)
+        eval "$cmd_update" >> "$LOG" 2>&1 && ok=true
     fi
+
+    if $ok; then step_ok "$name atualizado"
+    else step_warn "$name: falha na atualização"; fi
 }
 
 remove_tool() {
     local name="$1"
+
+    # Tenta via plugin primeiro
+    local plugin="$PLUGIN_DIR/${name}.sh"
+    if [[ -f "$plugin" ]]; then
+        log "  ✗ Removendo $name (plugin)"
+        ( source "$plugin"; remove ) >> "$LOG" 2>&1 || true
+        mark_removed "$name"
+        step_ok "$name removido"
+        return 0
+    fi
+
     local line
     line=$(read_tools | grep "^${name}:")
-    [[ -n "$line" ]] || die "Ferramenta '$name' não encontrada no tool-list.conf"
+    [[ -n "$line" ]] || die "Ferramenta '$name' não encontrada"
 
     log "  ✗ Removendo $name"
     pkg uninstall -y "$name" >> "$LOG" 2>&1 || pip uninstall -y "$name" >> "$LOG" 2>&1 || true
@@ -101,21 +155,20 @@ cmd_install_category() {
         [[ "$(field "$line" 2)" == "$category" ]] || continue
         install_tool "$line"
         (( count++ )) || true
-    done < <(read_tools)
+    done < <(read_all_tools)
     [[ "$count" -gt 0 ]] || log "⚠ Nenhuma ferramenta encontrada para categoria '$category'"
     log "=== $category: $count ferramenta(s) processada(s) ==="
 }
 
 cmd_install_list() {
-    # Instala lista de nomes separados por espaço ou vírgula
     local names="${*//,/ }"
     for name in $names; do
         local line
-        line=$(read_tools | grep "^${name}:")
+        line=$(read_all_tools | grep "^${name}:")
         if [[ -n "$line" ]]; then
             install_tool "$line"
         else
-            step_warn "Ferramenta '$name' não encontrada no tool-list.conf"
+            step_warn "Ferramenta '$name' não encontrada"
         fi
     done
 }
@@ -124,27 +177,43 @@ cmd_update_all() {
     log "=== Atualizando ferramentas instaladas ==="
     while IFS= read -r line; do
         update_tool "$line"
-    done < <(read_tools)
+    done < <(read_all_tools)
     log "=== Atualização concluída ==="
 }
 
 cmd_list() {
     local filter_cat="${1:-}"
-    printf "%-20s %-15s %s\n" "FERRAMENTA" "CATEGORIA" "DESCRIÇÃO"
-    printf "%-20s %-15s %s\n" "----------" "---------" "---------"
+    printf "%-20s %-15s %-8s %s\n" "FERRAMENTA" "CATEGORIA" "ORIGEM" "DESCRIÇÃO"
+    printf "%-20s %-15s %-8s %s\n" "----------" "---------" "------" "---------"
     while IFS= read -r line; do
-        local name category desc installed_mark=""
+        local name category desc origin installed_mark
         name=$(field "$line" 1)
         category=$(field "$line" 2)
         desc=$(field "$line" 3)
+        is_plugin "$line" && origin="plugin" || origin="conf"
         [[ -n "$filter_cat" && "$category" != "$filter_cat" ]] && continue
         is_installed "$name" && installed_mark=" ✓" || installed_mark=""
-        printf "%-20s %-15s %s%s\n" "$name" "$category" "$desc" "$installed_mark"
-    done < <(read_tools)
+        printf "%-20s %-15s %-8s %s%s\n" "$name" "$category" "$origin" "$desc" "$installed_mark"
+    done < <(read_all_tools)
 }
 
 cmd_categories() {
-    read_tools | cut -d: -f2 | sort -u
+    read_all_tools | cut -d: -f2 | sort -u
+}
+
+cmd_plugins() {
+    [[ -d "$PLUGIN_DIR" ]] || { echo "Nenhum plugin instalado."; return; }
+    printf "%-20s %-15s %s\n" "PLUGIN" "CATEGORIA" "DESCRIÇÃO"
+    printf "%-20s %-15s %s\n" "------" "---------" "---------"
+    local p
+    for p in "$PLUGIN_DIR"/*.sh; do
+        [[ -f "$p" ]] || continue
+        local line; line=$(plugin_line "$p")
+        local name category desc
+        name=$(field "$line" 1); category=$(field "$line" 2); desc=$(field "$line" 3)
+        is_installed "$name" && mark=" ✓" || mark=""
+        printf "%-20s %-15s %s%s\n" "$name" "$category" "$desc" "$mark"
+    done
 }
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
@@ -155,11 +224,12 @@ Uso: manager.sh <comando> [args]
 
 Comandos:
   install-category <cat>   Instala todas as ferramentas de uma categoria
-  install <nome,...>       Instala ferramenta(s) específica(s)
+  install <nome,...>       Instala ferramenta(s) específica(s) (conf ou plugin)
   update                   Atualiza todas as ferramentas instaladas
   remove <nome>            Remove uma ferramenta
-  list [categoria]         Lista ferramentas (✓ = instalada)
+  list [categoria]         Lista ferramentas (✓ = instalada, origem: conf/plugin)
   categories               Lista categorias disponíveis
+  plugins                  Lista plugins disponíveis em tools/plugins/
 EOF
 }
 
@@ -170,5 +240,6 @@ case "${1:-}" in
     remove)           remove_tool "${2:-}" ;;
     list)             cmd_list "${2:-}" ;;
     categories)       cmd_categories ;;
+    plugins)          cmd_plugins ;;
     *)                usage ;;
 esac
